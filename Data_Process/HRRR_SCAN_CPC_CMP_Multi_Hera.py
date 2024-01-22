@@ -78,7 +78,7 @@ for t in daterange(start_date,end_date):
     
     cpc = data.variables['CPC'][idf[0],:,:]
     
-    # Read in USCRN data
+    # Read in SCAN data
     data_uscrn = read_SCAN(YYYY+MM+DD)
     #print(np.shape(data_uscrn))
     #print('QCing steps next.')
