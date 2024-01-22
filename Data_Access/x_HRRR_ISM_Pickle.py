@@ -4,6 +4,7 @@
 Created on Fri Jul 30 20:21:01 2021
 
 @author: petermarinescu
+# Code to read soil moisture from HRRR and calculated integrated soil moisture in HRRR
 """
 
 import pygrib 
@@ -24,14 +25,13 @@ nslvls = 9; # Number of soil levels
 nx = 1799
 ny = 1059
 
-[lons,lats,lm] = pickle.load(open( inpath+'HRRR_lm.p', 'rb' ))
-[maxsmc_t,maxsmc_b] = pickle.load(open( inpath+'maxsmc.p','rb' ))
+[lons,lats,lm] = pickle.load(open( inpath+'HRRR_lm.p', 'rb' ) # Import lons, lats and landmask)
+[maxsmc_t,maxsmc_b] = pickle.load(open( inpath+'maxsmc.p','rb' )) # Import Maximum soil moisture content data
 
 # Define vertical levels in HRRR and for integration
 z_lvls = np.array([0, 0.01, 0.04, 0.1, 0.3, 0.6, 1.0, 1.6, 3.0])
 z_hafs = (z_lvls[1:]+z_lvls[:-1])/2
 z_hafs = np.insert(z_hafs,0,0)
-#z_i = [0,0.004,0.008,0.01,0.02,0.04,0.06,0.08,0.1,0.2,0.3,0.4,0.6,0.8,1.0,1.2,1.4,1.6]
 
 for t in daterange(start_date,end_date):
 
@@ -58,59 +58,11 @@ for t in daterange(start_date,end_date):
     for i in np.arange(0,nslvls):   
         m_lvls[:,:,i] = grb[i].values
 
-    #m_lvls[m_lvls > 0.485] = 0.485
-    m_lvls[m_lvls > 0.485] = np.nan     
-        
-    #ism_pjm = np.zeros((ny,nx))
-    #ism_ts1 = np.zeros((ny,nx))
-    # ism_ts2 = np.zeros((ny,nx))
+    #m_lvls[m_lvls > 0.485] = 0.485 # if values are higher than hard limit, set to hard limit # From Tanya Smirnova
+    m_lvls[m_lvls > 0.485] = np.nan # Remove soil moisture values above these levels # from Tanya Smirnova            
     ism_fin = np.zeros((ny,nx))
     
     startTime = datetime.now()
-    print(startTime)
-    #Peter Original Formulation
-#    cnt = 0
-#    for ii in np.arange(0,ny):
-#          for jj in np.arange(0,nx):
-#              if lm[ii,jj] == 0:
-#                  cnt = cnt + 1
-#                  continue
-#              else:
-#                  #print(cnt)
-#                  m_i = np.interp(z_i, z_lvls, m_lvls[ii,jj,:], left=m_lvls[ii,jj,0], right=m_lvls[ii,jj,nslvls-1])
-#                  m_i_mid = (m_i[1:]+m_i[:-1])/2
-#                  for k in np.arange(0,len(m_i_mid)):
-#                      m_i_mid[k] = np.min([maxsmc_t[ii,jj],m_i_mid[k]])
-#                  ism_pjm[ii,jj] = np.nansum(np.diff(z_i)*m_i_mid)*1000
-#                  cnt = cnt + 1
-    
-#    endloop1 = datetime.now()
-#    print(endloop1)
-    
-    #Code snippet from Tanya
-    #cnt = 0
-    #for ii in np.arange(0,ny):
-    #     for jj in np.arange(0,nx):
-    #         print(cnt)
-    #         for k in np.arange(0,nslvls-1):
-    #             cur_sm_val = np.min([maxsmc_t[ii,jj],m_lvls[ii,jj,k]])               
-    #                
-    #             ism_ts2[ii,jj] = ism_ts2[ii,jj] + (cur_sm_val * (z_hafs[k+1]-z_hafs[k]) * 1000)
-    #         cnt = cnt + 1
-    
-#    cnt = 0
-#    for ii in np.arange(0,ny):
-#          for jj in np.arange(0,nx):
-#              if lm[ii,jj] == 0:
-#                  cnt = cnt + 1
-#                  continue
-#              else:
-#                  #print(cnt)
-#                  for k in np.arange(0,nslvls-2):
-#                      cur_sm_val = np.min([maxsmc_t[ii,jj],m_lvls[ii,jj,k]])               
-#                       
-#                      ism_ts1[ii,jj] = ism_ts1[ii,jj] + (cur_sm_val * (z_hafs[k+1]-z_hafs[k]) * 1000)
-#                  cnt = cnt + 1
 
     cnt = 0
     for ii in np.arange(0,ny):
@@ -135,7 +87,6 @@ for t in daterange(start_date,end_date):
    
     pickpath = '/scratch1/RDARCH/rda-ghpcs/Peter.Marinescu/data/hrrr/pickle_fin/'
     filename = 'HRRR_ISM_'+YYYY+MM+DD+'_lm.p'
-    #pickle.dump([ism_pjm,ism_ts1,m_lvls,z_lvls,nx,ny,lons,lats,nslvls,an_date], open( pickpath+filename, "wb" ))
     pickle.dump([ism_fin,m_lvls,z_lvls,nx,ny,lons,lats,nslvls,an_date], open( pickpath+filename, "wb" ))
 
 
